@@ -1,0 +1,13 @@
+{
+  "name": "gt-bingo",
+  "version": "1.0.0",
+  "description": "GT Bingo Telegram Bot and Web App",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-telegram-bot-api": "^0.61.0"
+  }
+}
