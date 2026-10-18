@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Top Bingo</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root {
+--bg-color: #0f172a;
+--card-bg: #1e293b;
+--accent-color: #f59e0b;
+--text-color: #f8fafc;
+--green: #22c55e;
+--red: #ef4444;
+--blue: #3b82f6;
+}
+​* {
+box-sizing: border-box;
+margin: 0;
+padding: 0;
+font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+user-select: none;
+}
+​body {
+background-color: var(--bg-color);
+color: var(--text-color);
+display: flex;
+flex-direction: column;
+height: 100vh;
+overflow: hidden;
+}
+​/* Header Stat Bar */
+.header-stats {
+display: grid;
+grid-template-columns: repeat(3, 1fr) auto;
+gap: 6px;
+padding: 10px;
+background: #020617;
+font-size: 11px;
+font-weight: bold;
+align-items: center;
+border-bottom: 1px solid #334155;
+}
+​.stat-box {
+background: var(--card-bg);
+padding: 6px;
+border-radius: 6px;
+text-align: center;
+}
+​.stat-label {
+color: #94a3b8;
+font-size: 9px;
+display: block;
+}
+​.stat-value {
+color: var(--accent-color);
+font-size: 13px;
+}
+​/* Speech/Sound Toggle */
+.sound-btn {
+background: #334155;
+color: #fff;
+border: none;
+padding: 6px 10px;
+border-radius: 6px;
+font-size: 11px;
+cursor: pointer;
+}
+​/* Content Area */
+.main-content {
+flex: 1;
+overflow-y: auto;
+padding: 12px;
+display: flex;
+flex-direction: column;
+}
+​.tab-content {
+display: none;
+flex-direction: column;
+gap: 12px;
+}
+​.tab-content.active {
+display: flex;
+}
+​/* Game Board Area */
+.board-container {
+display: grid;
+grid-template-columns: repeat(5, 1fr);
+gap: 4px;
+background: #020617;
+padding: 6px;
+border-radius: 8px;
+}
+​.column-header {
+text-align: center;
+font-weight: 900;
+font-size: 16px;
+padding: 4px;
+color: var(--accent-color);
+}
+​.bingo-cell {
+background: var(--card-bg);
+aspect-ratio: 1;
+display: flex;
+align-items: center;
+justify-content: center;
+font-weight: bold;
+font-size: 13px;
+border-radius: 4px;
+border: 1px solid #334155;
+}
+​.bingo-cell.called {
+background: var(--green);
+color: #000;
+border-color: #86efac;
+}
+​/* Action Buttons */
+.btn {
+background: var(--blue);
+color: white;
+border: none;
+padding: 12px;
+border-radius: 8px;
+font-weight: bold;
+font-size: 14px;
+cursor: pointer;
+width: 100%;
+text-align: center;
+}
+​.btn-green { background: var(--green); }
+.btn-red { background: var(--red); }
+​/* Form Inputs */
+input, textarea, select {
+width: 100%;
+padding: 10px;
+background: #020617;
+border: 1px solid #334155;
+border-radius: 6px;
+color: white;
+font-size: 13px;
+margin-top: 4px;
+outline: none;
+}
+​/* Card Container */
+.card {
+background: var(--card-bg);
+padding: 12px;
+border-radius: 8px;
+border: 1px solid #334155;
+}
+​/* Bottom Navigation Bar */
+.nav-bar {
+display: grid;
+grid-template-columns: repeat(6, 1fr);
+background: #020617;
+border-top: 1px solid #334155;
+}
+​.nav-item {
+padding: 10px 2px;
+text-align: center;
+font-size: 10px;
+color: #94a3b8;
+cursor: pointer;
+border: none;
+background: none;
+}
+​.nav-item.active {
+color: var(--blue);
+font-weight: bold;
+border-top: 2px solid var(--blue);
+}
+​/* Custom Modal Alert */
+.modal-overlay {
+position: fixed;
+top: 0; left: 0; right: 0; bottom: 0;
+background: rgba(0, 0, 0, 0.8);
+display: none;
+align-items: center;
+justify-content: center;
+z-index: 1000;
+padding: 20px;
+}
+​.modal-box {
+background: var(--card-bg);
+border-radius: 12px;
+padding: 20px;
+width: 100%;
+max-width: 320px;
+text-align: center;
+border: 1px solid #334155;
+}
+​.modal-title {
+font-size: 16px;
+font-weight: bold;
+margin-bottom: 10px;
+}
+​.modal-desc {
+font-size: 13px;
+color: #cbd5e1;
+margin-bottom: 16px;
+line-height: 1.4;
+}
+</style>
+</head>
+<body>
+​<!-- Header Stats -->
+<div class="header-stats">
+<div class="stat-box">
+<span class="stat-label">DERASH (80%)</span>
+<span class="stat-value" id="derash-val">0.00 ETB</span>
+</div>
+<div class="stat-box">
+<span class="stat-label">BALLS</span>
+<span class="stat-value" id="balls-val">0/75</span>
+</div>
+<div class="stat-box">
+<span class="stat-label">BALANCE</span>
+<span class="stat-value" id="balance-val">0.00 ETB</span>
+</div>
+<button class="sound-btn" id="sound-toggle" onclick="toggleSound()">🔊 ON</button>
+</div>
+​<!-- Main Content Tabs -->
+<div class="main-content">
+​<!-- TAB 1: GAME BOARD -->
+<div id="tab-game" class="tab-content active">
+<div class="card" style="text-align: center;">
+<h3 id="current-call" style="font-size: 24px; color: var(--accent-color);">ዝግጁ (Ready)</h3>
+</div>
+<div class="board-container" id="bingo-board"></div>
+<button class="btn btn-green" onclick="claimBingo()">ቢንጎ (BINGO) በል!</button>
+</div>
+​<!-- TAB 2: MY BALANCE -->
+<div id="tab-balance" class="tab-content">
+<div class="card">
+<h3>የእኔ ባላንስ (My Balance)</h3>
+<p style="font-size: 20px; color: var(--accent-color); margin-top: 8px;" id="my-bal-display">0.00 ETB</p>
+</div>
+</div>
+​<!-- TAB 3: DEPOSIT (ገንዘብ ማስገቢያ) -->
+<div id="tab-deposit" class="tab-content">
+<div class="card">
+<h3 style="color: var(--blue); margin-bottom: 8px;">ገንዘብ ማስገቢያ (Deposit)</h3>
+<div style="background: #020617; padding: 10px; border-radius: 6px; font-size: 12px; border: 1px solid #334155; margin-bottom: 10px;">
+📍 <strong>ክፍያ መፈጸሚያ አድራሻ፦</strong>
+
+• ቴሌብር ስልክ ቁጥር፦ <strong style="color: var(--green);">0937565994</strong>
+</div>
+<p style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">
+ገንዘብ ከላኩ በኋላ ከቴሌብር የደረሰዎትን ትክክለኛ የክፍያ SMS ኮፒ አድርገው እዚህ ይለጥፉ፡
+</p>
+<textarea id="deposit-sms" rows="5" placeholder="ከቴሌብር የደረሰዎትን SMS ሙሉ በሙሉ እዚህ ላይ ፓስት (Paste) ያድርጉ..."></textarea>
+<button class="btn btn-green" style="margin-top: 10px;" onclick="processDeposit()">ባላንስ አድስ (በራሱ ይደመራል)</button>
+</div>
+</div>
+​<!-- TAB 4: WITHDRAW (ገንዘብ ማውጫ) -->
+<div id="tab-withdraw" class="tab-content">
+<div class="card">
+<h3 style="color: var(--accent-color); margin-bottom: 8px;">ገንዘብ ማውጫ (Withdraw)</h3>
+<label style="font-size: 11px; color: #94a3b8;">የብር መጠን (ETB):</label>
+<input type="number" id="withdraw-amount" placeholder="ምሳሌ: 100">
+​<label style="font-size: 11px; color: #94a3b8; margin-top: 8px; display: block;">የከፋይ ስም እና ስልክ ቁጥር (ቴሌብር / ባንክ):</label>
+<input type="text" id="withdraw-account" placeholder="ምሳሌ: 0911XXXXXX ወይም CBE 1000XXXXXXXX">
+​<button class="btn btn-red" style="margin-top: 12px;" onclick="processWithdraw()">የማውጣት ጥያቄ ላክ</button>
+</div>
+</div>
+​<!-- TAB 5: HISTORY -->
+<div id="tab-history" class="tab-content">
+<div class="card">
+<h3>የግብይት ታሪክ (History)</h3>
+<div id="history-list" style="font-size: 12px; margin-top: 8px; color: #94a3b8;">ምንም አይነት የግብይት ታሪክ የለም።</div>
+</div>
+</div>
+​<!-- TAB 6: INSTRUCTIONS -->
+<div id="tab-instruction" class="tab-content">
+<div class="card">
+<h3>አጠቃቀም (Instruction)</h3>
+<p style="font-size: 12px; color: #cbd5e1; margin-top: 6px; line-height: 1.5;">
+1. ክፍያ ለመፈጸም በቴሌብር 0937565994 ላይ ብር ይላኩ።
+
+2. የሚደርስዎትን SMS ኮፒ አድርገው Deposit በሚለው ገፅ ላይ በማስገባት ባላንስዎን ያድሱ።
+
+3. ጨዋታው ሲጀምር የተጠሩትን ቁጥሮች በመከታተል ቢንጎ ሲወጣ BINGO የሚለውን ቁልፍ ይጫኑ።
+</p>
+</div>
+</div>
+​</div>
+​<!-- Bottom Navigation Bar -->
+<div class="nav-bar">
+<button class="nav-item active" onclick="switchTab('game', this)">Game</button>
+<button class="nav-item" onclick="switchTab('balance', this)">Balance</button>
+<button class="nav-item" onclick="switchTab('deposit', this)">Deposit</button>
+<button class="nav-item" onclick="switchTab('withdraw', this)">Withdraw</button>
+<button class="nav-item" onclick="switchTab('history', this)">History</button>
+<button class="nav-item" onclick="switchTab('instruction', this)">Rules</button>
+</div>
+​<!-- Custom Alert Modal -->
+<div class="modal-overlay" id="alert-modal">
+<div class="modal-box">
+<div class="modal-title" id="modal-title">ማሳወቂያ</div>
+<div class="modal-desc" id="modal-desc">መግለጫ</div>
+<button class="btn" onclick="closeModal()">እሺ (OK)</button>
+</div>
+</div>
+​<script>
+// TELEGRAM & ADMIN CONFIG
+const tg = window.Telegram ? window.Telegram.WebApp : null;
+if(tg) tg.expand();
+​// ⚠️ አስተውል፦ እዚህ ጋር የቦት Token እና የእርስዎን Telegram Chat ID ያስገቡ!
+const BOT_TOKEN = "7953258529:AAEVzX9U8a-m-uA5p-uM29kRjD03lJq6V0I"; // የእርስዎ Bot Token
+const ADMIN_CHAT_ID = "6175180479"; // የእርስዎ Telegram User ID
+​const RECEIVER_PHONE = "0937565994"; // ክፍያ የሚቀበልበት ስልክ ቁጥር
+​let userBalance = parseFloat(localStorage.getItem('user_balance') || '0.00');
+let soundEnabled = true;
+let usedTxnIds = JSON.parse(localStorage.getItem('used_txns') || '[]');
+​function updateBalanceDisplay() {
+document.getElementById('balance-val').innerText = userBalance.toFixed(2) + " ETB";
+document.getElementById('my-bal-display').innerText = userBalance.toFixed(2) + " ETB";
+localStorage.setItem('user_balance', userBalance);
+}
+updateBalanceDisplay();
+​// Switch Tabs
+function switchTab(tabId, btn) {
+document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+document.getElementById('tab-' + tabId).classList.add('active');
+if(btn) btn.classList.add('active');
+}
+​// Custom Modal Alert
+function showAlert(title, desc) {
+document.getElementById('modal-title').innerText = title;
+document.getElementById('modal-desc').innerText = desc;
+document.getElementById('alert-modal').style.display = 'flex';
+}
+​function closeModal() {
+document.getElementById('alert-modal').style.display = 'none';
+}
+​// SOUND & SPEECH SYNTHESIS
+function toggleSound() {
+soundEnabled = !soundEnabled;
+document.getElementById('sound-toggle').innerText = soundEnabled ? "🔊 ON" : "🔇 OFF";
+}
+​function speakText(text) {
+if (!soundEnabled) return;
+if ('speechSynthesis' in window) {
+window.speechSynthesis.cancel();
+const utterance = new SpeechSynthesisUtterance(text);
+utterance.lang = 'en-US';
+utterance.rate = 0.9;
+window.speechSynthesis.speak(utterance);
+}
+}
+​// 🔒 STRICT SMS DEPOSIT VERIFICATION
+function processDeposit() {
+const smsText = document.getElementById('deposit-sms').value.trim();
+​if(!smsText) {
+showAlert("ስህተት", "እባክዎን ከቴሌብር የደረሰዎትን SMS ያስገቡ!");
+return;
+}
+​// 1. የፓኬጅ ወይም የአየር ሰአት ግዢ መሆኑን ማረጋገጥ (ይህን ውድቅ አድርግ)
+if(smsText.toLowerCase().includes("package") || smsText.toLowerCase().includes("airtime") || smsText.toLowerCase().includes("daily birr") || smsText.toLowerCase().includes("night bonus")) {
+showAlert("የተከለከለ ግብይት", "❌ የአየር ሰአት ወይም የፓኬጅ መግዣ SMS ማስገባት አይችሉም! እባክዎን የቴሌብር የገንዘብ ዝውውር መልእክት ያስገቡ።");
+return;
+}
+​// 2. የተላከው ወደ እርስዎ ስልክ ቁጥር (0937565994) መሆኑን ማረጋገጥ
+if(!smsText.includes(RECEIVER_PHONE) && !smsText.includes("251" + RECEIVER_PHONE.substring(1))) {
+showAlert("የተሳሳተ ስልክ ቁጥር", "❌ ክፍያው የተፈጸመው ወደተሳሳተ ስልክ ቁጥር ነው። ወደ " + RECEIVER_PHONE + " የተላከ የቴሌብር መልእክት ብቻ ያስገቡ!");
+return;
+}
+​// 3. የብር መጠን ማውጣት (Amount Extraction)
+const amountMatch = smsText.match(/(?:ETB|Birr)\s*([\d,]+(?:.\d{1,2})?)/i) || smsText.match(/([\d,]+(?:.\d{1,2})?)\s*(?:ETB|Birr)/i);
+​if(!amountMatch) {
+showAlert("ስህተት", "❌ የብር መጠኑን ከSMS ላይ ማግኘት አልተቻለም። እባክዎን ትክክለኛ የቴሌብር SMS ማስገባትዎን ያረጋግጡ።");
+return;
+}
+​let amount = parseFloat(amountMatch[1].replace(',', ''));
+​// 4. Transaction ID ማውጣት እና duplicate እንዳይሆን መከልከል
+const txnMatch = smsText.match(/(?:txn|transaction|ref|reference|id)[\s:]*([A-Z0-9]+)/i) || smsText.match(/([A-Z0-9]{8,12})/i);
+let txnId = txnMatch ? txnMatch[1] : null;
+​if(txnId && usedTxnIds.includes(txnId)) {
+showAlert("የተደገመ ግብይት", "❌ ይህ የቴሌብር ክፍያ መልእክት ቀደም ሲል ጥቅም ላይ ውሏል!");
+return;
+}
+​// ትክክለኛ ከሆነ ባላንስ ጨምር
+if(txnId) usedTxnIds.push(txnId);
+localStorage.setItem('used_txns', JSON.stringify(usedTxnIds));
+​userBalance += amount;
+updateBalanceDisplay();
+document.getElementById('deposit-sms').value = "";
+​showAlert("ስኬታማ!", ✓ የ ${amount.toFixed(2)} ብር ክፍያዎ በስኬት ተረጋግጦ ዋሌትዎ ላይ ተደምሯል!);
+​// ለአድሚኑ ማሳወቂያ መላክ
+sendTelegramAdminNotification(📥 **አዲስ ዲፖዚት ተደርጓል!**\n\n💰 መጠን: ${amount} ETB\n🧾 Txn ID: ${txnId || 'N/A'}\n👤 User ID: ${tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 'Guest'});
+}
+​// 📤 WITHDRAWAL PROCESS & ADMIN NOTIFICATION
+function processWithdraw() {
+const amount = parseFloat(document.getElementById('withdraw-amount').value);
+const account = document.getElementById('withdraw-account').value.trim();
+​if(!amount || amount <= 0) {
+showAlert("ስህተት", "እባክዎን ትክክለኛ የብር መጠን ያስገቡ!");
+return;
+}
+​if(amount > userBalance) {
+showAlert("በቂ ባላንስ የለም", "የጠየቁት የብር መጠን ከያዙት ባላንስ በላይ ነው!");
+return;
+}
+​if(!account) {
+showAlert("ስህተት", "እባክዎን ብሩ የሚላክበትን የቴሌብር ወይም የባንክ አካውንት ያስገቡ!");
+return;
+}
+​// ባላንስ ቀንስ
+userBalance -= amount;
+updateBalanceDisplay();
+​document.getElementById('withdraw-amount').value = "";
+document.getElementById('withdraw-account').value = "";
+​showAlert("ጥያቄው ተላክሏል", ✓ የ ${amount.toFixed(2)} ብር የዊዝድሮ ጥያቄዎ ለአድሚኑ ተላክሏል። አድሚኑ አረጋግጦ ብሩን ይልክልዎታል።);
+​// 📲 ለአድሚኑ የቴሌግራም ቦት መልእክት ቀጥታ መላክ
+const userName = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.first_name : 'User';
+const userId = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 'N/A';
+​const adminMsg = 📤 **አዲስ የዊዝድሮ (Withdrawal) ጥያቄ!**\n\n👤 ተጠቃሚ: ${userName} (ID:${userId})\n💰 የብር መጠን: **${amount} ETB**\n🏦 መላኪያ አካውንት: \${account}``;
+​sendTelegramAdminNotification(adminMsg);
+}
+​// TELEGRAM BOT API NOTIFICATION FUNCTION
+function sendTelegramAdminNotification(messageText) {
+if(!BOT_TOKEN || !ADMIN_CHAT_ID) return;
+​const url = https://api.telegram.org/bot${BOT_TOKEN}/sendMessage;
+fetch(url, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({
+chat_id: ADMIN_CHAT_ID,
+text: messageText,
+parse_mode: 'Markdown'
+})
+}).catch(err => console.error("Admin notification error:", err));
+}
+​// BINGO BOARD INITIALIZATION
+function initBoard() {
+const board = document.getElementById('bingo-board');
+board.innerHTML = '';
+const letters = ['B', 'I', 'N', 'G', 'O'];
+​letters.forEach(l => {
+const header = document.createElement('div');
+header.className = 'column-header';
+header.innerText = l;
+board.appendChild(header);
+});
+​for(let i = 1; i <= 75; i++) {
+const cell = document.createElement('div');
+cell.className = 'bingo-cell';
+cell.innerText = i;
+cell.id = 'cell-' + i;
+board.appendChild(cell);
+}
+}
+​function claimBingo() {
+speakText("Bingo!");
+showAlert("BINGO!", "የቢንጎ ጥያቄዎ ለሲስተሙ ተልኳል።");
+}
+​initBoard();
+</script>
+</body>
+</html>
